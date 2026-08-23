@@ -167,13 +167,26 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		storeId: z.string(),
 		secretName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("send-email"),
-		destinationAddress: z.string().optional(),
-		allowedDestinationAddresses: z.array(z.string()).optional(),
-		allowedSenderAddresses: z.array(z.string()).optional(),
-		remote: z.boolean().optional(),
-	}),
+	z
+		.strictObject({
+			type: z.literal("send-email"),
+			destinationAddress: z.string().optional(),
+			allowedDestinationAddresses: z.array(z.string()).optional(),
+			allowedSenderAddresses: z.array(z.string()).optional(),
+			remote: z.boolean().optional(),
+		})
+		.superRefine((value, ctx) => {
+			if (
+				value.destinationAddress !== undefined &&
+				value.allowedDestinationAddresses !== undefined
+			) {
+				ctx.addIssue({
+					code: "custom",
+					message:
+						'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"',
+				});
+			}
+		}),
 	z.strictObject({
 		type: z.literal("stream"),
 		remote: z.boolean().optional(),
