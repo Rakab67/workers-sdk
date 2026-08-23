@@ -1,4 +1,5 @@
 import * as z from "zod";
+import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { SettingsConfig, WorkerConfig } from "./types";
 
 export const AssetsSchema = z.strictObject({
@@ -175,18 +176,15 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 			allowedSenderAddresses: z.array(z.string()).optional(),
 			remote: z.boolean().optional(),
 		})
-		.superRefine((value, ctx) => {
-			if (
-				value.destinationAddress !== undefined &&
-				value.allowedDestinationAddresses !== undefined
-			) {
-				ctx.addIssue({
-					code: "custom",
-					message:
-						'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"',
-				});
+		.refine(
+			(value): value is SendEmailBinding =>
+				value.destinationAddress === undefined ||
+				value.allowedDestinationAddresses === undefined,
+			{
+				message:
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"',
 			}
-		}),
+		),
 	z.strictObject({
 		type: z.literal("stream"),
 		remote: z.boolean().optional(),
@@ -210,18 +208,21 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 			networkId: z.string().optional(),
 			remote: z.boolean().optional(),
 		})
-		.superRefine((value, ctx) => {
-			const hasTunnel = value.tunnelId !== undefined;
-			const hasNetwork = value.networkId !== undefined;
-			if (hasTunnel === hasNetwork) {
-				ctx.addIssue({
-					code: "custom",
-					message: hasTunnel
+		.refine(
+			(value): value is VpcNetworkBinding =>
+				(value.tunnelId !== undefined) !== (value.networkId !== undefined),
+			{
+				error: ({ input }) => {
+					const value = input as {
+						tunnelId?: string;
+						networkId?: string;
+					};
+					return value.tunnelId !== undefined && value.networkId !== undefined
 						? `"vpc-network" bindings must specify exactly one of "tunnelId" or "networkId", not both`
-						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`,
-				});
+						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`;
+				},
 			}
-		}),
+		),
 	z.strictObject({
 		type: z.literal("web-search"),
 		remote: z.boolean().optional(),

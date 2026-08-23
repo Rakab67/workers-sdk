@@ -541,10 +541,12 @@ type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
+			networkId?: never;
 			/** Whether the VPC network is remote or not. */
 			remote?: boolean;
 	  }
 	| {
+			tunnelId?: never;
 			/** The network ID to route traffic through. Mutually exclusive with `tunnelId`. */
 			networkId: string;
 			/** Whether the VPC network is remote or not. */
